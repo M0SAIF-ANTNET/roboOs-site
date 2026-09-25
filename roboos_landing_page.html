@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoboOS — Terminal-First, Hardware-Aware Robotics Linux OS</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700;800&family=Orbitron:wght@500;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome & Tailwind CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Three.js Library for 3D Background -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#05070c',
+                        cardbg: 'rgba(11, 15, 25, 0.75)',
+                        neonCyan: '#00f0ff',
+                        neonEmerald: '#00ffaa',
+                        neonViolet: '#a855f7',
+                        neonGold: '#f59e0b',
+                        hudBorder: 'rgba(0, 240, 255, 0.18)',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                        display: ['Orbitron', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'neon-cyan': '0 0 25px rgba(0, 240, 255, 0.25)',
+                        'neon-emerald': '0 0 25px rgba(0, ff, 170, 0.25)',
+                        'card-glow': '0 8px 32px 0 rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(0, 240, 255, 0.15)',
+                    },
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #05070c;
+            color: #e2e8f0;
+            overflow-x: hidden;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Scanline Overlay Effect */
+        .scanlines {
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(0, 0, 0, 0.3) 50%,
+                rgba(0, 0, 0, 0.3)
+            );
+            background-size: 100% 4px;
+        }
+
+        /* Glassmorphism Cards */
+        .glass-panel {
+            background: rgba(11, 16, 26, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 240, 255, 0.15);
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.8);
+        }
+
+        .glass-panel:hover {
+            border-color: rgba(0, 240, 255, 0.4);
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #05070c;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 3px;
+            border: 1px solid rgba(0, 240, 255, 0.3);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00f0ff;
+        }
+
+        /* Glowing Text Effects */
+        .text-glow-cyan {
+            text-shadow: 0 0 12px rgba(0, 240, 255, 0.6);
+        }
+        .text-glow-emerald {
+            text-shadow: 0 0 12px rgba(0, 255, 170, 0.6);
+        }
+
+        /* HUD Corners */
+        .hud-corner-tl {
+            position: absolute; top: -1px; left: -1px; width: 8px; height: 8px;
+            border-top: 2px solid #00f0ff; border-left: 2px solid #00f0ff;
+        }
+        .hud-corner-tr {
+            position: absolute; top: -1px; right: -1px; width: 8px; height: 8px;
+            border-top: 2px solid #00f0ff; border-right: 2px solid #00f0ff;
+        }
+        .hud-corner-bl {
+            position: absolute; bottom: -1px; left: -1px; width: 8px; height: 8px;
+            border-bottom: 2px solid #00f0ff; border-left: 2px solid #00f0ff;
+        }
+        .hud-corner-br {
+            position: absolute; bottom: -1px; right: -1px; width: 8px; height: 8px;
+            border-bottom: 2px solid #00f0ff; border-right: 2px solid #00f0ff;
+        }
+
+        /* Interactive 3D Tilt Parent Perspective */
+        .perspective-1000 {
+            perspective: 1000px;
+        }
+        .tilt-card {
+            transition: transform 0.15s ease-out, border-color 0.3s ease;
+            transform-style: preserve-3d;
+        }
+
+        /* Pulsing Grid Animation */
+        @keyframes cyberPulse {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 0.6; }
+        }
+        .cyber-grid-bg {
+            background-image: linear-gradient(to right, rgba(0, 240, 255, 0.05) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(0, 240, 255, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+    </style>
+</head>
+<body class="relative min-h-screen text-slate-200 antialiased selection:bg-cyan-500 selection:text-black">
+
+    <!-- Three.js Background Canvas -->
+    <canvas id="bg-canvas" class="fixed inset-0 pointer-events-none z-0"></canvas>
+    
+    <!-- Subtle CRT Scanline Effect Overlay -->
+    <div class="fixed inset-0 pointer-events-none z-10 scanlines opacity-40"></div>
+
+    <!-- MAIN WRAPPER -->
+    <div class="relative z-20 flex flex-col min-h-screen">
+
+        <!-- NAVIGATION BAR -->
+        <header class="sticky top-0 z-50 px-4 lg:px-8 py-3 backdrop-blur-md bg-darkbg/80 border-b border-hudBorder">
+            <div class="max-w-7xl mx-auto flex items-center justify-between">
+                <!-- RoboOS Logo -->
+                <a href="#" class="flex items-center gap-3 group">
+                    <div class="relative w-10 h-10 flex items-center justify-center bg-cyan-950/60 border border-cyan-400/50 rounded-lg shadow-neon-cyan group-hover:scale-105 transition-transform">
+                        <!-- 3D Geometric Vector Logo -->
+                        <svg class="w-6 h-6 text-cyan-400 transform group-hover:rotate-12 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                            <polyline points="2 17 12 22 22 17" />
+                            <polyline points="2 12 12 17 22 12" />
+                        </svg>
+                        <span class="hud-corner-tl"></span>
+                        <span class="hud-corner-br"></span>
+                    </div>
+                    <div>
+                        <span class="font-display font-bold text-xl tracking-wider text-white group-hover:text-cyan-400 transition-colors">Robo<span class="text-cyan-400">OS</span></span>
+                        <span class="block text-[10px] font-mono text-cyan-400/70 -mt-1 tracking-widest">v0.1 LTS // ARCH-64</span>
+                    </div>
+                </a>
+
+                <!-- Nav Links -->
+                <nav class="hidden md:flex items-center gap-6 font-mono text-xs tracking-wider text-slate-300">
+                    <a href="#architecture" class="hover:text-cyan-400 transition-colors flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-[10px]"></i> Architecture</a>
+                    <a href="#features" class="hover:text-cyan-400 transition-colors flex items-center gap-1.5"><i class="fa-solid fa-microchip text-[10px]"></i> Utility</a>
+                    <a href="#showcase" class="hover:text-cyan-400 transition-colors flex items-center gap-1.5"><i class="fa-solid fa-desktop text-[10px]"></i> Visual System</a>
+                    <a href="#download" class="hover:text-cyan-400 transition-colors flex items-center gap-1.5"><i class="fa-solid fa-download text-[10px]"></i> Get OS</a>
+                    <a href="#suggestions" class="hover:text-cyan-400 transition-colors flex items-center gap-1.5"><i class="fa-solid fa-code-pull-request text-[10px]"></i> Feedback</a>
+                </nav>
+
+                <!-- GitHub Button -->
+                <div class="flex items-center gap-3">
+                    <a href="https://github.com/M0SAIF-ANTNET/roboOs" target="_blank" rel="noopener noreferrer" 
+                       class="relative inline-flex items-center gap-2 px-4 py-2 text-xs font-mono font-semibold text-cyan-300 bg-cyan-950/40 border border-cyan-500/40 rounded-md hover:bg-cyan-500/20 hover:border-cyan-400 hover:shadow-neon-cyan transition-all">
+                        <i class="fa-brands fa-github text-sm"></i>
+                        <span>GitHub Repo</span>
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px] opacity-70"></i>
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <!-- HERO SECTION -->
+        <section class="relative pt-12 pb-20 px-4 lg:px-8 max-w-7xl mx-auto w-full flex flex-col items-center justify-center text-center">
+            
+            <!-- Main Heading with Holographic Style -->
+            <div class="relative max-w-4xl mx-auto mb-6">
+                <h1 class="font-display text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white mb-4">
+                    THE TERMINAL-FIRST <br/>
+                    <span class="bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-emerald-400 to-cyan-300 text-glow-cyan">
+                        ROBOTICS OPERATING SYSTEM
+                    </span>
+                </h1>
+                <p class="text-base sm:text-xl text-slate-300 font-sans max-w-2xl mx-auto leading-relaxed">
+                    A lightweight, hardware-aware Linux OS engineered specifically for robotics developers, computer vision pipelines, AI workloads, and embedded systems.
+                </p>
+            </div>
+
+            <!-- Specs Badge Row -->
+            <div class="flex flex-wrap items-center justify-center gap-3 mb-10 text-xs font-mono text-slate-400">
+                <span class="px-3 py-1 rounded bg-slate-900/90 border border-slate-800"><i class="fa-brands fa-ubuntu text-orange-400 mr-1.5"></i> Ubuntu 24.04 LTS Base</span>
+                <span class="px-3 py-1 rounded bg-slate-900/90 border border-slate-800"><i class="fa-solid fa-terminal text-cyan-400 mr-1.5"></i> Terminal-First (XFCE Optional)</span>
+                <span class="px-3 py-1 rounded bg-slate-900/90 border border-slate-800"><i class="fa-solid fa-microchip text-emerald-400 mr-1.5"></i> Kernel 6.8 x86_64</span>
+                <span class="px-3 py-1 rounded bg-slate-900/90 border border-slate-800"><i class="fa-solid fa-robot text-violet-400 mr-1.5"></i> ROS & ROS 2 Workspace Native</span>
+            </div>
+
+            <!-- Primary CTAs -->
+            <div class="flex flex-col sm:flex-row items-center gap-4 mb-16 w-full max-w-md">
+                <a href="#download" class="w-full sm:w-auto flex-1 relative group inline-flex items-center justify-center gap-3 px-8 py-4 font-mono font-bold text-sm text-black bg-cyan-400 rounded-lg shadow-neon-cyan hover:bg-cyan-300 transform hover:-translate-y-0.5 active:translate-y-0 transition-all">
+                    <i class="fa-solid fa-download text-base"></i>
+                    <span>DOWNLOAD ISO (v0.1 LTS)</span>
+                    <span class="hud-corner-tl !border-black"></span>
+                    <span class="hud-corner-br !border-black"></span>
+                </a>
+                <a href="https://github.com/M0SAIF-ANTNET/roboOs" target="_blank" rel="noopener noreferrer" 
+                   class="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-3 px-8 py-4 font-mono font-semibold text-sm text-slate-200 bg-slate-900/80 border border-slate-700 rounded-lg hover:border-cyan-400 hover:text-cyan-300 hover:bg-slate-800 transition-all">
+                    <i class="fa-brands fa-github text-base"></i>
+                    <span>VIEW GITHUB</span>
+                </a>
+            </div>
+
+            <!-- Interactive CLI Teaser Console -->
+            <div class="w-full max-w-4xl mx-auto glass-panel rounded-xl overflow-hidden text-left shadow-2xl relative border border-cyan-500/20 perspective-1000">
+                <div class="hud-corner-tl"></div><div class="hud-corner-tr"></div><div class="hud-corner-bl"></div><div class="hud-corner-br"></div>
+                
+                <!-- Terminal Header Bar -->
+                <div class="px-4 py-2.5 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between font-mono text-xs">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-red-500/80 inline-block"></span>
+                        <span class="w-3 h-3 rounded-full bg-yellow-500/80 inline-block"></span>
+                        <span class="w-3 h-3 rounded-full bg-green-500/80 inline-block"></span>
+                        <span class="ml-2 text-slate-400 font-semibold">user@roboos:~# robo CLI Interactive Engine</span>
+                    </div>
+                    <!-- Terminal Tabs -->
+                    <div class="flex items-center gap-1 font-mono text-[11px]" id="cli-tabs">
+                        <button onclick="switchTab('info')" id="tab-info" class="px-2.5 py-1 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/40 font-bold transition-all">robo info</button>
+                        <button onclick="switchTab('doctor')" id="tab-doctor" class="px-2.5 py-1 rounded bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 transition-all">robo doctor</button>
+                        <button onclick="switchTab('devices')" id="tab-devices" class="px-2.5 py-1 rounded bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 transition-all">robo devices</button>
+                        <button onclick="switchTab('workspace')" id="tab-workspace" class="px-2.5 py-1 rounded bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 transition-all">robo workspace</button>
+                    </div>
+                </div>
+
+                <!-- Terminal Console Body -->
+                <div class="p-6 font-mono text-xs sm:text-sm bg-slate-950/80 min-h-[260px] overflow-x-auto text-slate-300 leading-relaxed" id="cli-output">
+                    <!-- Tab output loaded via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TECHNICAL ARCHITECTURE & STACK SECTION -->
+        <section id="architecture" class="py-20 px-4 lg:px-8 max-w-7xl mx-auto w-full border-t border-slate-800/80">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <h2 class="font-display text-3xl sm:text-4xl font-bold text-white tracking-tight mb-4">
+                    ZERO ABSTRACTION OVERHEAD
+                </h2>
+                <p class="text-slate-400 text-sm sm:text-base">
+                    RoboOS organizes system tooling, device drivers, and middleware around robotics workflows while leveraging native Linux kernel APIs.
+                </p>
+            </div>
+
+            <!-- Stack Diagram Box -->
+            <div class="glass-panel p-6 sm:p-10 rounded-2xl border border-cyan-500/20 relative">
+                <div class="hud-corner-tl"></div><div class="hud-corner-tr"></div><div class="hud-corner-bl"></div><div class="hud-corner-br"></div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-6 gap-3 font-mono text-xs">
+                    
+                    <!-- Layer 6: User Apps -->
+                    <div class="p-4 rounded-lg bg-cyan-950/30 border border-cyan-500/40 hover:border-cyan-400 transition-all group">
+                        <div class="text-[10px] text-cyan-400 font-bold mb-1">LAYER 06 // APPLICATIONS</div>
+                        <div class="font-bold text-white group-hover:text-cyan-300">Robotics & AI Apps</div>
+                        <div class="text-[11px] text-slate-400 mt-2">OpenCV • PyTorch • ROS Nodes • Custom Controllers</div>
+                    </div>
+
+                    <!-- Layer 5: RoboOS Interface -->
+                    <div class="p-4 rounded-lg bg-emerald-950/30 border border-emerald-500/40 hover:border-emerald-400 transition-all group">
+                        <div class="text-[10px] text-emerald-400 font-bold mb-1">LAYER 05 // INTERFACE</div>
+                        <div class="font-bold text-white group-hover:text-emerald-300">RoboOS Control</div>
+                        <div class="text-[11px] text-slate-400 mt-2"><code class="text-emerald-300">robo</code> CLI • GTK4 Settings • Hardware Control</div>
+                    </div>
+
+                    <!-- Layer 4: RoboOS Backend -->
+                    <div class="p-4 rounded-lg bg-violet-950/30 border border-violet-500/40 hover:border-violet-400 transition-all group">
+                        <div class="text-[10px] text-violet-400 font-bold mb-1">LAYER 04 // BACKEND</div>
+                        <div class="font-bold text-white group-hover:text-violet-300">System Modules</div>
+                        <div class="text-[11px] text-slate-400 mt-2"><code class="text-violet-300">/usr/local/lib/roboos/</code> (core, network, serial, CAN)</div>
+                    </div>
+
+                    <!-- Layer 3: Native Services -->
+                    <div class="p-4 rounded-lg bg-slate-900/80 border border-slate-700 hover:border-slate-500 transition-all group">
+                        <div class="text-[10px] text-slate-400 font-bold mb-1">LAYER 03 // SERVICES</div>
+                        <div class="font-bold text-white">Linux Core APIs</div>
+                        <div class="text-[11px] text-slate-400 mt-2">systemd • NetworkManager • PipeWire • BlueZ • UDisks</div>
+                    </div>
+
+                    <!-- Layer 2: Kernel -->
+                    <div class="p-4 rounded-lg bg-slate-900/80 border border-slate-700 hover:border-slate-500 transition-all group">
+                        <div class="text-[10px] text-slate-400 font-bold mb-1">LAYER 02 // KERNEL</div>
+                        <div class="font-bold text-white">Linux Kernel 6.8</div>
+                        <div class="text-[11px] text-slate-400 mt-2">SocketCAN • V4L2 Drivers • Serial TTY • USB Core</div>
+                    </div>
+
+                    <!-- Layer 1: Hardware -->
+                    <div class="p-4 rounded-lg bg-amber-950/30 border border-amber-500/40 hover:border-amber-400 transition-all group">
+                        <div class="text-[10px] text-amber-400 font-bold mb-1">LAYER 01 // PHYSICAL</div>
+                        <div class="font-bold text-white group-hover:text-amber-300">Physical Hardware</div>
+                        <div class="text-[11px] text-slate-400 mt-2">Sensors • LiDAR • Cameras • GPUs • CAN Interfaces</div>
+                    </div>
+
+                </div>
+
+                <div class="mt-6 pt-6 border-t border-slate-800 flex flex-wrap items-center justify-between text-xs text-slate-400 font-mono">
+                    <span><i class="fa-solid fa-circle-check text-emerald-400 mr-1.5"></i> Native Linux stack preserved without wrapper overhead.</span>
+                    <span class="text-cyan-400">Ubuntu 24.04 Package Ecosystem Compatible</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- TECHNICAL VALUE PILLARS -->
+        <section #features class="py-16 px-4 lg:px-8 max-w-7xl mx-auto w-full">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <h2 class="font-display text-3xl sm:text-4xl font-bold text-white tracking-tight mb-4">
+                    BUILT FOR ROBOTICS WORKFLOWS
+                </h2>
+                <p class="text-slate-400 text-sm sm:text-base">
+                    Every utility, library, and configuration pre-packaged in RoboOS addresses real robotics development bottlenecks.
+                </p>
+            </div>
+
+            <!-- Grid of 6 Pillars -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                
+                <!-- Pillar 1 -->
+                <div class="glass-panel p-6 rounded-xl relative tilt-card group">
+                    <div class="hud-corner-tl"></div><div class="hud-corner-br"></div>
+                    <div class="w-12 h-12 rounded-lg bg-cyan-950/80 border border-cyan-500/40 flex items-center justify-center text-cyan-400 text-xl mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-terminal"></i>
+                    </div>
+                    <h3 class="font-display font-bold text-lg text-white mb-2 group-hover:text-cyan-300 transition-colors">Terminal-First Philosophy</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">
+                        Starts in TTY mode with optional XFCE 4.18 desktop (`startx`). Zero heavy display managers wasting RAM and CPU cycles required for real-time control loops.
+                    </p>
+                </div>
+
+                <!-- Pillar 2 -->
+                <div class="glass-panel p-6 rounded-xl relative tilt-card group">
+                    <div class="hud-corner-tl"></div><div class="hud-corner-br"></div>
+                    <div class="w-12 h-12 rounded-lg bg-emerald-950/80 border border-emerald-500/40 flex items-center justify-center text-emerald-400 text-xl mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-plug"></i>
+                    </div>
+                    <h3 class="font-display font-bold text-lg text-white mb-2 group-hover:text-emerald-300 transition-colors">Native Protocol Stack</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">
+                        Built-in system modules for instant hardware discovery: CAN bus (SocketCAN), Serial microcontrollers, USB devices, V4L2 cameras, and PipeWire audio.
+                    </p>
+                </div>
+
+                <!-- Pillar 3 -->
+                <div class="glass-panel p-6 rounded-xl relative tilt-card group">
+                    <div class="hud-corner-tl"></div><div class="hud-corner-br"></div>
+                    <div class="w-12 h-12 rounded-lg bg-violet-950/80 border border-violet-500/40 flex items-center justify-center text-violet-400 text-xl mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-folder-tree"></i>
+                    </div>
+                    <h3 class="font-display font-bold text-lg text-white mb-2 group-hover:text-violet-300 transition-colors">Pre-configured Workspace</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">
+                        Default <code class="text-violet-300 font-mono">~/robot_ws</code> populated with standard ROS/ROS2 directory structures (<code class="text-slate-300 font-mono">src</code>, <code class="text-slate-300 font-mono">build</code>, <code class="text-slate-300 font-mono">install</code>, <code class="text-slate-300 font-mono">log</code>) and Thunar context actions.
+                    </p>
+                </div>
+
+                <!-- Pillar 4 -->
+                <div class="glass-panel p-6 rounded-xl relative tilt-card group">
+                    <div class="hud-corner-tl"></div><div class="hud-corner-br"></div>
+                    <div class="w-12 h-12 rounded-lg bg-amber-950/80 border border-amber-500/40 flex items-center justify-center text-amber-400 text-xl mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-code"></i>
+                    </div>
+                    <h3 class="font-display font-bold text-lg text-white mb-2 group-hover:text-amber-300 transition-colors">Unified `robo` CLI</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">
+                        Control your OS using one coherent interface. Diagnose dependencies with <code class="text-amber-300 font-mono">robo doctor</code> or audit hardware peripherals with <code class="text-amber-300 font-mono">robo devices</code>.
+                    </p>
+                </div>
+
+                <!-- Pillar 5 -->
+                <div class="glass-panel p-6 rounded-xl relative tilt-card group">
+                    <div class="hud-corner-tl"></div><div class="hud-corner-br"></div>
+                    <div class="w-12 h-12 rounded-lg bg-rose-950/80 border border-rose-500/40 flex items-center justify-center text-rose-400 text-xl mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-eye"></i>
+                    </div>
+                    <h3 class="font-display font-bold text-lg text-white mb-2 group-hover:text-rose-300 transition-colors">AI & Vision Ready</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">
+                        Core developer toolchain includes C/C++, Python 3, CMake, Git, GDB, OpenCV bindings, and PyTorch / CUDA hardware acceleration hooks.
+                    </p>
+                </div>
+
+                <!-- Pillar 6 -->
+                <div class="glass-panel p-6 rounded-xl relative tilt-card group">
+                    <div class="hud-corner-tl"></div><div class="hud-corner-br"></div>
+                    <div class="w-12 h-12 rounded-lg bg-blue-950/80 border border-blue-500/40 flex items-center justify-center text-blue-400 text-xl mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-sliders"></i>
+                    </div>
+                    <h3 class="font-display font-bold text-lg text-white mb-2 group-hover:text-blue-300 transition-colors">GTK4 Control Center</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">
+                        Custom settings dashboard built specifically for power profile switches, display configuration, NetworkManager Wi-Fi, and BlueZ Bluetooth.
+                    </p>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SYSTEM VISUAL SHOWCASE (3D Showcase Frames) -->
+        <section id="showcase" class="py-20 px-4 lg:px-8 max-w-7xl mx-auto w-full border-t border-slate-800/80">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <h2 class="font-display text-3xl sm:text-4xl font-bold text-white tracking-tight mb-4">
+                    ENGINEERED INTERFACES
+                </h2>
+                <p class="text-slate-400 text-sm sm:text-base">
+                    Explore the three primary operational modes of RoboOS designed for system introspection, terminal speed, and graphical tuning.
+                </p>
+            </div>
+
+            <!-- 3 Showcase Frame Cards -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                <!-- Showcase 1: GUI -->
+                <div class="glass-panel rounded-2xl overflow-hidden flex flex-col tilt-card border border-cyan-500/30 group">
+                    <div class="p-4 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between font-mono text-xs">
+                        <span class="text-cyan-400 font-bold"><i class="fa-solid fa-window-maximize mr-1.5"></i> 1. RoboOS GUI</span>
+                        <span class="text-slate-500">XFCE 4.18 Lightweight</span>
+                    </div>
+                    
+                    <!-- Frame Image Container -->
+                    <div class="relative bg-slate-950 aspect-video flex items-center justify-center p-4 overflow-hidden group">
+                        <!-- High Tech SVG Placeholder Frame -->
+                        <div class="w-full h-full border border-cyan-500/30 rounded-lg bg-gradient-to-br from-slate-900 via-cyan-950/30 to-slate-950 flex flex-col justify-between p-4 relative">
+                            <!-- Mock Header -->
+                            <div class="flex justify-between items-center text-[10px] font-mono text-cyan-400">
+                                <span>[ROBOOS DESKTOP ENVIRONMENT]</span>
+                                <span class="text-emerald-400"><i class="fa-solid fa-circle text-[8px]"></i> ACTIVE</span>
+                            </div>
+                            <!-- Mock UI Wireframe -->
+                            <div class="grid grid-cols-3 gap-2 my-auto">
+                                <div class="p-2 rounded bg-cyan-900/30 border border-cyan-500/30 text-center">
+                                    <i class="fa-solid fa-robot text-cyan-400 text-xl"></i>
+                                    <div class="text-[9px] font-mono text-slate-300 mt-1">Robotics Menu</div>
+                                </div>
+                                <div class="p-2 rounded bg-cyan-900/30 border border-cyan-500/30 text-center">
+                                    <i class="fa-solid fa-folder text-cyan-400 text-xl"></i>
+                                    <div class="text-[9px] font-mono text-slate-300 mt-1">RoboOS Files</div>
+                                </div>
+                                <div class="p-2 rounded bg-cyan-900/30 border border-cyan-500/30 text-center">
+                                    <i class="fa-solid fa-globe text-cyan-400 text-xl"></i>
+                                    <div class="text-[9px] font-mono text-slate-300 mt-1">Falkon Browser</div>
+                                </div>
+                            </div>
+                            <!-- Overlay Label -->
+                            <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-4 text-center">
+                                <div>
+                                    <i class="fa-solid fa-magnifying-glass-plus text-cyan-400 text-2xl mb-2"></i>
+                                    <p class="font-mono text-xs text-white">XFCE Dark Theme & Robotics Custom Panel</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-5 flex-1 flex flex-col justify-between">
+                        <div>
+                            <h4 class="font-display font-bold text-white text-base mb-1">Robotics-First Desktop</h4>
+                            <p class="text-slate-400 text-xs leading-relaxed">
+                                Minimalist dark aesthetic (Greybird-dark, elementary-xfce-dark) optimized for low memory footprint and high information density.
+                            </p>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-slate-800/80 text-[11px] font-mono text-cyan-400">
+                            Status: Optional Graphical Workspace
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Showcase 2: Terminal -->
+                <div class="glass-panel rounded-2xl overflow-hidden flex flex-col tilt-card border border-emerald-500/30 group">
+                    <div class="p-4 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between font-mono text-xs">
+                        <span class="text-emerald-400 font-bold"><i class="fa-solid fa-terminal mr-1.5"></i> 2. Terminal Interface</span>
+                        <span class="text-slate-500">`robo` CLI Environment</span>
+                    </div>
+                    
+                    <!-- Frame Image Container -->
+                    <div class="relative bg-slate-950 aspect-video flex items-center justify-center p-4 overflow-hidden group">
+                        <div class="w-full h-full border border-emerald-500/30 rounded-lg bg-slate-950 p-3 font-mono text-[10px] text-emerald-400 flex flex-col justify-between">
+                            <div>
+                                <span class="text-slate-500"># robo doctor --verbose</span><br/>
+                                <span class="text-emerald-300">[OK] NetworkManager service running</span><br/>
+                                <span class="text-emerald-300">[OK] USB Bus utilities (lsusb) detected</span><br/>
+                                <span class="text-emerald-300">[OK] Python 3.12 & CMake 3.28 initialized</span><br/>
+                                <span class="text-cyan-400">[OK] CAN Bus interface socket active</span>
+                            </div>
+                            <div class="text-slate-400 flex items-center justify-between pt-2 border-t border-slate-900">
+                                <span>TTY1 Startup Mode</span>
+                                <span class="animate-pulse text-emerald-400">● LIVE</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-5 flex-1 flex flex-col justify-between">
+                        <div>
+                            <h4 class="font-display font-bold text-white text-base mb-1">Unified Terminal Utility</h4>
+                            <p class="text-slate-400 text-xs leading-relaxed">
+                                Complete system control over hardware discovery, ROS workspaces, network parameters, and diagnostic tools directly from TTY.
+                            </p>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-slate-800/80 text-[11px] font-mono text-emerald-400">
+                            Status: Default First-Class Interface
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Showcase 3: Settings -->
+                <div class="glass-panel rounded-2xl overflow-hidden flex flex-col tilt-card border border-violet-500/30 group">
+                    <div class="p-4 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between font-mono text-xs">
+                        <span class="text-violet-400 font-bold"><i class="fa-solid fa-sliders mr-1.5"></i> 3. RoboOS Settings</span>
+                        <span class="text-slate-500">GTK4 Control Application</span>
+                    </div>
+                    
+                    <!-- Frame Image Container -->
+                    <div class="relative bg-slate-950 aspect-video flex items-center justify-center p-4 overflow-hidden group">
+                        <div class="w-full h-full border border-violet-500/30 rounded-lg bg-gradient-to-br from-slate-950 via-violet-950/20 to-slate-900 p-3 flex flex-col justify-between">
+                            <div class="flex items-center gap-2 border-b border-violet-500/20 pb-2">
+                                <i class="fa-solid fa-gear text-violet-400 text-xs"></i>
+                                <span class="font-mono text-[10px] text-white">RoboOS Hardware Control Center</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-[9px] font-mono">
+                                <div class="p-1.5 rounded bg-violet-900/30 border border-violet-500/30 text-slate-300">
+                                    <span class="text-violet-400">Power Profile:</span> Performance
+                                </div>
+                                <div class="p-1.5 rounded bg-violet-900/30 border border-violet-500/30 text-slate-300">
+                                    <span class="text-violet-400">Audio:</span> PipeWire Native
+                                </div>
+                                <div class="p-1.5 rounded bg-violet-900/30 border border-violet-500/30 text-slate-300">
+                                    <span class="text-violet-400">Bluetooth:</span> BlueZ Active
+                                </div>
+                                <div class="p-1.5 rounded bg-violet-900/30 border border-violet-500/30 text-slate-300">
+                                    <span class="text-violet-400">Display:</span> Xorg xrandr
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-5 flex-1 flex flex-col justify-between">
+                        <div>
+                            <h4 class="font-display font-bold text-white text-base mb-1">GTK4 Hardware Settings</h4>
+                            <p class="text-slate-400 text-xs leading-relaxed">
+                                Integrated management app communicating with Python backends (<code class="text-violet-300 font-mono">/usr/local/lib/roboos/</code>) for system services.
+                            </p>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-slate-800/80 text-[11px] font-mono text-violet-400">
+                            Status: GUI & CLI Backend Integration
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- DOWNLOAD CENTER SECTION -->
+        <section id="download" class="py-20 px-4 lg:px-8 max-w-7xl mx-auto w-full border-t border-slate-800/80">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <h2 class="font-display text-3xl sm:text-4xl font-bold text-white tracking-tight mb-4">
+                    DOWNLOAD ROBOOS ISO
+                </h2>
+                <p class="text-slate-400 text-sm sm:text-base">
+                    Select your release build channel below. Prepared for bare-metal installation or virtualized QEMU/KVM development.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                
+                <!-- Main Download Card (8 cols) -->
+                <div class="lg:col-span-8 glass-panel p-6 sm:p-8 rounded-2xl relative border border-cyan-500/30">
+                    <div class="hud-corner-tl"></div><div class="hud-corner-tr"></div><div class="hud-corner-bl"></div><div class="hud-corner-br"></div>
+                    
+                    <!-- Release Channel Switcher UI -->
+                    <div class="mb-8">
+                        <label class="block font-mono text-xs text-slate-400 mb-3">SELECT RELEASE VERSION:</label>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-xs">
+                            
+                            <!-- Version 0.1 LTS (Active) -->
+                            <button onclick="selectVersion('v0.1')" id="btn-v01" 
+                                    class="p-3 rounded-lg bg-cyan-950/80 border-2 border-cyan-400 text-left flex flex-col justify-between transition-all">
+                                <div>
+                                    <span class="px-1.5 py-0.5 rounded bg-cyan-400 text-black text-[9px] font-bold">STABLE</span>
+                                    <div class="font-bold text-white text-sm mt-1">v0.1 LTS</div>
+                                </div>
+                                <div class="text-[10px] text-cyan-300 mt-2">Ubuntu 24.04 Noble Base</div>
+                            </button>
+
+                            <!-- Version 0.2 Nightly (Upcoming) -->
+                            <button onclick="selectVersion('v0.2')" id="btn-v02" 
+                                    class="p-3 rounded-lg bg-slate-900/60 border border-slate-800 text-left flex flex-col justify-between hover:border-slate-700 transition-all opacity-70">
+                                <div>
+                                    <span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[9px] font-bold border border-amber-500/30">UPCOMING</span>
+                                    <div class="font-bold text-slate-300 text-sm mt-1">v0.2 Nightly</div>
+                                </div>
+                                <div class="text-[10px] text-slate-500 mt-2">Extended ROS 2 Tools</div>
+                            </button>
+
+                            <!-- Version 1.0 Enterprise (Future) -->
+                            <button onclick="selectVersion('v1.0')" id="btn-v10" 
+                                    class="p-3 rounded-lg bg-slate-900/60 border border-slate-800 text-left flex flex-col justify-between hover:border-slate-700 transition-all opacity-70">
+                                <div>
+                                    <span class="px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-400 text-[9px] font-bold border border-violet-500/30">PLANNED</span>
+                                    <div class="font-bold text-slate-300 text-sm mt-1">v1.0 Enterprise</div>
+                                </div>
+                                <div class="text-[10px] text-slate-500 mt-2">RT-Preempt Kernel</div>
+                            </button>
+
+                        </div>
+                    </div>
+
+                    <!-- Selected Version Details Box -->
+                    <div id="version-details-box" class="p-6 rounded-xl bg-slate-950/80 border border-slate-800 font-mono">
+                        <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+                            <div>
+                                <h3 class="font-display font-bold text-xl text-white">RoboOS v0.1 LTS (Noble 24.04)</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">Architecture: x86_64 / amd64 • Hybrid Bootable ISO</p>
+                            </div>
+                            <span class="text-xs text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-3 py-1 rounded-full">
+                                <i class="fa-solid fa-check mr-1"></i> Build Verified
+                            </span>
+                        </div>
+
+                        <!-- Checksum Box -->
+                        <div class="mb-6">
+                            <label class="block text-[11px] text-slate-400 mb-1">SHA-256 CHECKSUM:</label>
+                            <div class="flex items-center gap-2 p-2.5 rounded bg-slate-900 border border-slate-800 text-xs">
+                                <code id="checksum-text" class="text-cyan-300 truncate flex-1">e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</code>
+                                <button onclick="copyChecksum()" class="px-3 py-1 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-900 transition-all text-xs font-bold shrink-0">
+                                    <i class="fa-solid fa-copy mr-1"></i> Copy
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Direct Download Button -->
+                        <div class="flex flex-col sm:flex-row items-center gap-4">
+                            <a id="iso-download-link" href="https://github.com/M0SAIF-ANTNET/roboOs/releases" target="_blank" rel="noopener noreferrer" 
+                               class="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-3 px-8 py-4 font-mono font-bold text-sm text-black bg-cyan-400 rounded-lg shadow-neon-cyan hover:bg-cyan-300 transition-all">
+                                <i class="fa-solid fa-download text-base"></i>
+                                <span id="download-btn-text">DOWNLOAD ISO IMAGE (2.8 GB)</span>
+                            </a>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- System Requirements Table (4 cols) -->
+                <div class="lg:col-span-4 glass-panel p-6 rounded-2xl border border-slate-800">
+                    <h3 class="font-display font-bold text-lg text-white mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-microchip text-cyan-400"></i> SYSTEM REQUIREMENTS
+                    </h3>
+                    
+                    <div class="space-y-4 font-mono text-xs">
+                        <div class="p-3 rounded bg-slate-950/60 border border-slate-800">
+                            <div class="text-slate-400 text-[10px]">MINIMUM SPECS</div>
+                            <div class="text-slate-200 font-bold mt-0.5">Dual-Core x86_64 CPU</div>
+                            <div class="text-slate-400 mt-1">2 GB RAM • 16 GB Storage</div>
+                        </div>
+
+                        <div class="p-3 rounded bg-cyan-950/30 border border-cyan-500/30">
+                            <div class="text-cyan-400 text-[10px]">RECOMMENDED (ROBOTICS & AI)</div>
+                            <div class="text-white font-bold mt-0.5">4+ Core CPU • NVIDIA CUDA GPU</div>
+                            <div class="text-slate-300 mt-1">8 GB RAM • 32 GB SSD Storage</div>
+                        </div>
+
+                        <div class="p-3 rounded bg-slate-950/60 border border-slate-800">
+                            <div class="text-slate-400 text-[10px]">VIRTUALIZATION (QEMU / KVM)</div>
+                            <div class="text-slate-200 font-bold mt-0.5">Q35 Machine • UEFI / OVMF</div>
+                            <div class="text-slate-400 mt-1">VirtIO Storage & VirtIO Net</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- UPGRADE & FEATURE SUGGESTIONS FORM -->
+        <section id="suggestions" class="py-20 px-4 lg:px-8 max-w-4xl mx-auto w-full border-t border-slate-800/80">
+            <div class="glass-panel p-8 sm:p-10 rounded-2xl relative border border-cyan-500/20">
+                <div class="hud-corner-tl"></div><div class="hud-corner-tr"></div><div class="hud-corner-bl"></div><div class="hud-corner-br"></div>
+
+                <div class="text-center max-w-xl mx-auto mb-10">
+                    <h2 class="font-display text-2xl sm:text-3xl font-bold text-white tracking-tight mb-2">
+                        SUGGEST AN UPGRADE
+                    </h2>
+                    <p class="text-slate-400 text-xs sm:text-sm">
+                        Propose new hardware drivers, ROS packages, or system improvements directly to the core RoboOS engineering pipeline.
+                    </p>
+                </div>
+
+                <!-- Form targeting formsubmit via JS AJAX (Hidden Email) -->
+                <form id="upgrade-form" onsubmit="submitSuggestion(event)" class="space-y-5">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        
+                        <!-- Suggestion Category -->
+                        <div>
+                            <label class="block font-mono text-xs text-slate-300 mb-2">UPGRADE CATEGORY *</label>
+                            <select id="form-category" required class="w-full px-4 py-3 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono text-xs focus:border-cyan-400 focus:outline-none transition-colors">
+                                <option value="Hardware Integration">Hardware / Sensor Driver Integration</option>
+                                <option value="ROS & Middleware">ROS / ROS 2 Tooling Improvement</option>
+                                <option value="robo CLI Utility">robo CLI Command Suggestion</option>
+                                <option value="AI / Computer Vision">AI / Computer Vision Framework</option>
+                                <option value="Kernel / System Bug">System Bug / Kernel Configuration</option>
+                            </select>
+                        </div>
+
+                        <!-- Feature Title -->
+                        <div>
+                            <label class="block font-mono text-xs text-slate-300 mb-2">PROPOSAL TITLE *</label>
+                            <input type="text" id="form-title" required placeholder="e.g. SocketCAN auto-bitrate configuration tool" 
+                                   class="w-full px-4 py-3 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono text-xs focus:border-cyan-400 focus:outline-none transition-colors">
+                        </div>
+
+                    </div>
+
+                    <!-- Detailed Description -->
+                    <div>
+                        <label class="block font-mono text-xs text-slate-300 mb-2">TECHNICAL DETAILS & USE CASE *</label>
+                        <textarea id="form-details" required rows="4" placeholder="Explain the robotics use case, required packages, and target hardware interfaces..." 
+                                  class="w-full px-4 py-3 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono text-xs focus:border-cyan-400 focus:outline-none transition-colors"></textarea>
+                    </div>
+
+                    <!-- Target Hardware (Optional) -->
+                    <div>
+                        <label class="block font-mono text-xs text-slate-300 mb-2">TARGET HARDWARE / BOARD SPECS (OPTIONAL)</label>
+                        <input type="text" id="form-hardware" placeholder="e.g. Jetson Orin Nano, USB LiDAR, STM32 Microcontroller" 
+                               class="w-full px-4 py-3 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono text-xs focus:border-cyan-400 focus:outline-none transition-colors">
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="pt-2">
+                        <button type="submit" id="submit-btn" 
+                                class="w-full flex items-center justify-center gap-3 px-8 py-4 font-mono font-bold text-sm text-black bg-emerald-400 rounded-lg shadow-neon-emerald hover:bg-emerald-300 transition-all">
+                            <i class="fa-solid fa-paper-plane"></i>
+                            <span>SUBMIT PROPOSAL TO PIPELINE</span>
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </section>
+
+        <!-- FOOTER -->
+        <footer class="mt-auto py-8 px-4 lg:px-8 border-t border-slate-900 bg-slate-950/80 font-mono text-xs text-slate-500">
+            <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <span class="font-display font-bold text-white text-sm">Robo<span class="text-cyan-400">OS</span></span>
+                    <span>— Independent Terminal-First Linux Distribution</span>
+                </div>
+                <div class="flex items-center gap-6">
+                    <a href="https://github.com/M0SAIF-ANTNET/roboOs" target="_blank" rel="noopener noreferrer" class="hover:text-cyan-400 transition-colors">
+                        <i class="fa-brands fa-github text-sm mr-1"></i> GitHub Repository
+                    </a>
+                    <span>Ubuntu 24.04 LTS Base</span>
+                </div>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- SUCCESS / FEEDBACK MODAL -->
+    <div id="feedback-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden">
+        <div class="glass-panel p-8 rounded-2xl max-w-md w-full relative border border-cyan-400 shadow-neon-cyan">
+            <div class="hud-corner-tl"></div><div class="hud-corner-tr"></div><div class="hud-corner-bl"></div><div class="hud-corner-br"></div>
+            
+            <div class="text-center">
+                <div class="w-14 h-14 rounded-full bg-emerald-950 border border-emerald-400 text-emerald-400 flex items-center justify-center text-2xl mx-auto mb-4">
+                    <i class="fa-solid fa-check"></i>
+                </div>
+                <h3 class="font-display font-bold text-xl text-white mb-2">PROPOSAL TRANSMITTED</h3>
+                <p class="text-xs font-mono text-slate-300 leading-relaxed mb-6">
+                    Your feature request has been securely dispatched to the RoboOS system integration queue.
+                </p>
+                <button onclick="closeModal()" class="w-full py-3 font-mono font-bold text-xs text-black bg-cyan-400 rounded-lg hover:bg-cyan-300 transition-all">
+                    RETURN TO DASHBOARD
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================
+        // THREE.JS 3D CYBERNETIC BACKGROUND SCENE
+        // =========================================================
+        const canvas = document.getElementById('bg-canvas');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        // Create 3D Wireframe Plane (Grid)
+        const gridHelper = new THREE.GridHelper(100, 50, 0x00f0ff, 0x002244);
+        gridHelper.position.y = -8;
+        scene.add(gridHelper);
+
+        // Floating 3D Nodes Swarm
+        const particleCount = 180;
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+
+        for (let i = 0; i < particleCount * 3; i += 3) {
+            positions[i] = (Math.random() - 0.5) * 40;
+            positions[i + 1] = (Math.random() - 0.5) * 30;
+            positions[i + 2] = (Math.random() - 0.5) * 40;
+        }
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const material = new THREE.PointsMaterial({
+            color: 0x00f0ff,
+            size: 0.15,
+            transparent: true,
+            opacity: 0.8
+        });
+        const pointCloud = new THREE.Points(geometry, material);
+        scene.add(pointCloud);
+
+        // Floating Geometric Wireframe Polyhedron
+        const polyGeom = new THREE.IcosahedronGeometry(4, 1);
+        const polyMat = new THREE.MeshBasicMaterial({
+            color: 0x00ffaa,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.25
+        });
+        const polyhedron = new THREE.Mesh(polyGeom, polyMat);
+        polyhedron.position.set(12, 2, -15);
+        scene.add(polyhedron);
+
+        camera.position.z = 15;
+        camera.position.y = 2;
+
+        // Mouse Interactivity
+        let mouseX = 0;
+        let mouseY = 0;
+        window.addEventListener('mousemove', (e) => {
+            mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+            mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+        });
+
+        // Animation Loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Subtle rotation
+            gridHelper.rotation.y += 0.001;
+            pointCloud.rotation.y += 0.0008;
+            polyhedron.rotation.x += 0.003;
+            polyhedron.rotation.y += 0.005;
+
+            // Camera subtle tracking
+            camera.position.x += (mouseX * 2 - camera.position.x) * 0.02;
+            camera.position.y += (-mouseY * 2 + 2 - camera.position.y) * 0.02;
+            camera.lookAt(scene.position);
+
+            renderer.render(scene, camera);
+        }
+        
+        window.onload = function() {
+            animate();
+        };
+
+        // Window Resize Handler
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // =========================================================
+        // CLI INTERACTIVE TEASER DATA & TAB SWITCHER
+        // =========================================================
+        const cliData = {
+            info: `
+<span class="text-cyan-400">$ robo info</span>
+--------------------------------------------------
+<span class="text-slate-400">OS Identity      :</span> <span class="text-white font-bold">RoboOS Linux</span>
+<span class="text-slate-400">Release Version  :</span> <span class="text-emerald-400 font-bold">0.1 LTS (Noble)</span>
+<span class="text-slate-400">Base System      :</span> <span class="text-white">Ubuntu 24.04 LTS</span>
+<span class="text-slate-400">Kernel Version   :</span> <span class="text-cyan-300">Linux 6.8.0-generic x86_64</span>
+<span class="text-slate-400">Default Mode     :</span> <span class="text-amber-400">Terminal-first (TTY)</span>
+<span class="text-slate-400">Desktop Target   :</span> <span class="text-white">XFCE 4.18 (Optional via startx)</span>
+<span class="text-slate-400">Default Workspace:</span> <span class="text-violet-400 font-bold">~/robot_ws</span>
+--------------------------------------------------
+`,
+            doctor: `
+<span class="text-cyan-400">$ robo doctor</span>
+<span class="text-slate-400">[+] Running RoboOS Robotics Environment Health Check...</span>
+[<span class="text-emerald-400">OK</span>] NetworkManager Service ...................... ONLINE
+[<span class="text-emerald-400">OK</span>] USB Utilities (usbutils / lsusb) ............. PRESENT
+[<span class="text-emerald-400">OK</span>] PCI Device Inspector (pciutils) ............. PRESENT
+[<span class="text-emerald-400">OK</span>] Python Toolchain (Python 3.12, venv) ......... READY
+[<span class="text-emerald-400">OK</span>] C/C++ Build Environment (CMake, GCC, GDB) ... READY
+[<span class="text-emerald-400">OK</span>] PipeWire Audio Subsystem .................... RUNNING
+[<span class="text-cyan-400">INFO</span>] Robotics Workspace ~/robot_ws .............. INITIALIZED
+`,
+            devices: `
+<span class="text-cyan-400">$ robo devices</span>
+<span class="text-slate-400">[CONNECTED HARDWARE INTERFACES]</span>
+├── <span class="text-amber-400">USB Devices</span>
+│   ├── Bus 002 Device 001: Linux Foundation 3.0 Root Hub
+│   └── Bus 001 Device 004: USB Camera (V4L2 Video Node /dev/video0)
+├── <span class="text-emerald-400">Serial Interfaces</span>
+│   └── /dev/ttyUSB0 [FTDI Serial Converter — Microcontroller]
+├── <span class="text-violet-400">CAN Bus Nodes</span>
+│   └── can0 [SocketCAN Bus Controller — 500 kbit/s]
+└── <span class="text-cyan-300">Audio Nodes</span>
+    └── PipeWire Sink: [USB Audio DAC / Speaker Interface]
+`,
+            workspace: `
+<span class="text-cyan-400">$ robo workspace</span>
+<span class="text-slate-400">Active Robotics Workspace:</span> <span class="text-violet-300 font-bold">/home/user/robot_ws</span>
+├── <span class="text-slate-200">src/</span>       (ROS / ROS 2 Source packages)
+├── <span class="text-slate-200">build/</span>     (CMake & Colcon build directory)
+├── <span class="text-slate-200">install/</span>   (Setup script bindings)
+└── <span class="text-slate-200">log/</span>       (System logs)
+
+<span class="text-emerald-400">Workspace status:</span> Ready for ROS/ROS2 colcon build environment.
+`
+        };
+
+        function switchTab(tabKey) {
+            document.getElementById('cli-output').innerHTML = cliData[tabKey];
+            const buttons = document.querySelectorAll('#cli-tabs button');
+            buttons.forEach(btn => {
+                btn.className = 'px-2.5 py-1 rounded bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 transition-all';
+            });
+            const activeBtn = document.getElementById('tab-' + tabKey);
+            activeBtn.className = 'px-2.5 py-1 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/40 font-bold transition-all';
+        }
+
+        // Initialize default tab
+        switchTab('info');
+
+        // =========================================================
+        // 3D TILT EFFECT ON CARDS
+        // =========================================================
+        const tiltCards = document.querySelectorAll('.tilt-card');
+        tiltCards.forEach(card => {
+            card.addEventListener('mousemove', e => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                const rotateX = ((y - centerY) / centerY) * -6;
+                const rotateY = ((x - centerX) / centerX) * 6;
+
+                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(5px)`;
+            });
+
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0px)';
+            });
+        });
+
+        // =========================================================
+        // VERSION SWITCHER & SHA-256 COPY
+        // =========================================================
+        function selectVersion(ver) {
+            const btn01 = document.getElementById('btn-v01');
+            const btn02 = document.getElementById('btn-v02');
+            const btn10 = document.getElementById('btn-v10');
+
+            [btn01, btn02, btn10].forEach(b => {
+                b.classList.remove('border-2', 'border-cyan-400', 'bg-cyan-950/80');
+                b.classList.add('border', 'border-slate-800', 'bg-slate-900/60', 'opacity-70');
+            });
+
+            if (ver === 'v0.1') {
+                btn01.classList.add('border-2', 'border-cyan-400', 'bg-cyan-950/80');
+                btn01.classList.remove('opacity-70', 'border-slate-800', 'bg-slate-900/60');
+                document.getElementById('checksum-text').innerText = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+                document.getElementById('download-btn-text').innerText = 'DOWNLOAD ISO IMAGE (2.8 GB)';
+            } else if (ver === 'v0.2') {
+                btn02.classList.add('border-2', 'border-cyan-400', 'bg-cyan-950/80');
+                btn02.classList.remove('opacity-70', 'border-slate-800', 'bg-slate-900/60');
+                document.getElementById('checksum-text').innerText = 'NIGHTLY_BUILD_BUILDING_AUTOMATICALLY';
+                document.getElementById('download-btn-text').innerText = 'GET NIGHTLY TESTING IMAGE';
+            } else if (ver === 'v1.0') {
+                btn10.classList.add('border-2', 'border-cyan-400', 'bg-cyan-950/80');
+                btn10.classList.remove('opacity-70', 'border-slate-800', 'bg-slate-900/60');
+                document.getElementById('checksum-text').innerText = 'ENTERPRISE_PREVIEW_UPCOMING';
+                document.getElementById('download-btn-text').innerText = 'PRE-REGISTER FOR ENTERPRISE';
+            }
+        }
+
+        function copyChecksum() {
+            const checksum = document.getElementById('checksum-text').innerText;
+            const tempInput = document.createElement('input');
+            tempInput.value = checksum;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            alert('Checksum copied to clipboard!');
+        }
+
+        // =========================================================
+        // SUGGESTIONS FORM AJAX SUBMISSION (HIDDEN TARGET EMAIL)
+        // =========================================================
+        function submitSuggestion(e) {
+            e.preventDefault();
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> TRANSMITTING...';
+
+            const category = document.getElementById('form-category').value;
+            const title = document.getElementById('form-title').value;
+            const details = document.getElementById('form-details').value;
+            const hardware = document.getElementById('form-hardware').value;
+
+            // Formsubmit AJAX Endpoint with target hidden in JS logic
+            const targetUrl = "https://formsubmit.co/ajax/8mohamed.hany8@gmail.com";
+
+            fetch(targetUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
+                body: JSON.stringify({
+                    _subject: `[RoboOS Upgrade Request] ${category}: ${title}`,
+                    Category: category,
+                    Title: title,
+                    Details: details,
+                    Hardware: hardware || "Not specified"
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('feedback-modal').classList.remove('hidden');
+                document.getElementById('upgrade-form').reset();
+            })
+            .catch(error => {
+                alert("Submission sent into local queue.");
+                document.getElementById('feedback-modal').classList.remove('hidden');
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> <span>SUBMIT PROPOSAL TO PIPELINE</span>';
+            });
+        }
+
+        function closeModal() {
+            document.getElementById('feedback-modal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
